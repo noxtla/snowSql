@@ -35,3 +35,17 @@ CREATE TABLE person (
     FOREIGN KEY (gender_id_FK) REFERENCES gender(id_gender) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (marital_status_id_FK) REFERENCES marital_status(id_marital_status) ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
+CREATE TABLE ClientData (
+    client_id INT PRIMARY KEY,
+    passport_number VARCHAR(50),
+    email VARCHAR(255),
+    has_used_other_names BOOLEAN NOT NULL,
+    other_nationality VARCHAR(255),
+    us_social_security_number VARCHAR(50),
+    taxpayer_id VARCHAR(50),
+    visa_type VARCHAR(50),
+    passport_photo BLOB,  
+    memo TEXT,
+    FOREIGN KEY (client_id) REFERENCES person(id_person) ON DELETE CASCADE ON UPDATE CASCADE
+);
