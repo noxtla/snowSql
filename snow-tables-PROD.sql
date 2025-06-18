@@ -1,51 +1,97 @@
-create database snow;
-use snow;
-drop database snow;
+-- ================================================================
+-- SCRIPT DE CREACIÓN DEL ESQUEMA DE BASE DE DATOS ACTUALIZADO
+-- Autor: noxtla
+-- Descripción: Este script crea las tablas para un sistema
+-- de gestión de personal, separando los datos personales
+-- de los datos laborales para una mejor normalización.
+-- Motor de BD asumido: PostgreSQL (por el uso de SERIAL y BYTEA)
+-- ================================================================
 
-CREATE TABLE marital_status (
-    id_marital_status INT AUTO_INCREMENT PRIMARY KEY,
-    description_marital_status VARCHAR(255) NOT NULL UNIQUE
+-- Se recomienda ejecutar estas sentencias dentro de una transacción
+-- BEGIN;
+
+-- ===================================================
+-- GRUPO 1: TABLAS DE CATÁLOGO O DE CONSULTA (LOOKUP)
+-- Estas tablas almacenan opciones predefinidas para evitar
+-- la redundancia y los errores de tipeo.
+-- ===================================================
+
+-- Tabla: positions
+-- Almacena los diferentes puestos de trabajo disponibles.
+CREATE TABLE positions (
+    position_id SERIAL PRIMARY KEY,
+    position_name VARCHAR(50) NOT NULL UNIQUE
 );
 
-CREATE TABLE birthplace (
-    id_birthplace INT AUTO_INCREMENT PRIMARY KEY,
-    city VARCHAR(255),
-    state VARCHAR(255),
-    country VARCHAR(255) NOT NULL,
-    CONSTRAINT unique_birthplace UNIQUE (city, state, country)
+-- Tabla: time_zones
+-- Almacena las zonas horarias para los empleados.
+CREATE TABLE time_zones (
+    time_zone_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
 );
 
-CREATE TABLE gender (
-    id_gender INT AUTO_INCREMENT PRIMARY KEY,
-    description_gender VARCHAR(50) NOT NULL UNIQUE
+-- Tabla: employee_status
+-- Define el estado de un empleado (ej: Activo, Inactivo, De vacaciones).
+CREATE TABLE employee_status (
+    status_id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
 );
 
+
+-- ===================================================
+-- GRUPO 2: TABLA DE ENTIDAD PRINCIPAL
+-- ===================================================
+
+-- Tabla: person
+-- Contiene la información demográfica y personal de un individuo,
+-- que puede ser un empleado o cualquier otra persona en el sistema.
 CREATE TABLE person (
-    id_person INT AUTO_INCREMENT PRIMARY KEY,
-	first_name VARCHAR(255) NOT NULL,
-    middle_name VARCHAR(255),
-    last_name VARCHAR(255) NOT NULL,
-    second_last_name VARCHAR(255),
-    mobile_phone BIGINT NOT NULL UNIQUE,
-    birthplace_id_FK INT,
-    gender_id_FK INT,
-    marital_status_id_FK INT,
+    person_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    middle_name VARCHAR(50),
+    last_name VARCHAR(50) NOT NULL,
+    second_last_name VARCHAR(50),
     birth_date DATE NOT NULL,
-    FOREIGN KEY (birthplace_id_FK) REFERENCES birthplace(id_birthplace) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (gender_id_FK) REFERENCES gender(id_gender) ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (marital_status_id_FK) REFERENCES marital_status(id_marital_status) ON DELETE RESTRICT ON UPDATE CASCADE
+    phone VARCHAR(20) UNIQUE, -- VARCHAR es mejor para teléfonos por prefijos, guiones, etc.
+    ssn VARCHAR(15),          -- Número de Seguro Social, como texto para no perder ceros iniciales.
+    photo BYTEA               -- Para almacenar datos binarios de una imagen (BLOB en otros sistemas).
 );
 
-CREATE TABLE ClientData (
-    client_id INT PRIMARY KEY,
-    passport_number VARCHAR(50),
-    email VARCHAR(255),
-    has_used_other_names BOOLEAN NOT NULL,
-    other_nationality VARCHAR(255),
-    us_social_security_number VARCHAR(50),
-    taxpayer_id VARCHAR(50),
-    visa_type VARCHAR(50),
-    passport_photo BLOB,  
-    memo TEXT,
-    FOREIGN KEY (client_id) REFERENCES person(id_person) ON DELETE CASCADE ON UPDATE CASCADE
+
+-- ===================================================
+-- GRUPO 3: TABLA DE RELACIÓN
+-- Conecta las entidades y catálogos.
+-- ===================================================
+
+-- Tabla: employees
+-- Contiene información específica del rol laboral de una persona.
+-- Vincula una persona con su puesto, estado, y otros detalles laborales.
+CREATE TABLE employees (
+    employee_id SERIAL PRIMARY KEY,
+    person_id INT NOT NULL,
+    hire_date DATE NOT NULL,
+    status_id INT,
+    position_id INT,
+    time_zone_id INT,
+
+    -- Definición de las claves foráneas para garantizar la integridad referencial
+    CONSTRAINT fk_person
+        FOREIGN KEY (person_id) REFERENCES person(person_id)
+        ON DELETE CASCADE, -- Si se elimina la persona, se elimina su registro de empleado.
+
+    CONSTRAINT fk_position
+        FOREIGN KEY (position_id) REFERENCES positions(position_id)
+        ON DELETE SET NULL, -- Si se elimina un puesto, el campo en empleado se vuelve nulo.
+
+    CONSTRAINT fk_status
+        FOREIGN KEY (status_id) REFERENCES employee_status(status_id)
+        ON DELETE SET NULL, -- Si se elimina un estado, el campo en empleado se vuelve nulo.
+
+    CONSTRAINT fk_time_zone
+        FOREIGN KEY (time_zone_id) REFERENCES time_zones(time_zone_id)
+        ON DELETE SET NULL -- Si se elimina una zona horaria, el campo en empleado se vuelve nulo.
 );
+
+-- COMMIT;
+
+-- Final del script. La base de datos está lista para ser poblada.
